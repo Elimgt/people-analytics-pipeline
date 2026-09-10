@@ -19,7 +19,8 @@ models:
       - name: source
         tests:
           - accepted_values:
-              values: ["LinkedIn", "Referral", "Job Board", "Career Site", "Recruiter Outreach"]
+              arguments:
+                values: ["LinkedIn", "Referral", "Job Board", "Career Site", "Recruiter Outreach"]
   - name: stg_requisitions
     columns:
       - name: req_id
@@ -31,7 +32,8 @@ models:
       - name: stage
         tests:
           - accepted_values:
-              values: ["Applied", "Screening", "Interview", "Offer", "Hired", "Rejected"]
+              arguments:
+                values: ["Applied", "Screening", "Interview", "Offer", "Hired", "Rejected"]
   - name: stg_offers
     columns:
       - name: offer_id
