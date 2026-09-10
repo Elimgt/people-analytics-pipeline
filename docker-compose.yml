@@ -1,0 +1,45 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:15
+    container_name: people_analytics_db
+    environment:
+      POSTGRES_USER: dbt_user
+      POSTGRES_PASSWORD: dbt_pass
+      POSTGRES_DB: people_analytics
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.airflow
+    container_name: people_analytics_airflow
+    depends_on:
+      - postgres
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: people_analytics
+      DB_USER: dbt_user
+      DB_PASSWORD: dbt_pass
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./dbt_project:/opt/airflow/dbt_project
+      - ./data:/opt/airflow/data
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "airflow db migrate &&
+      airflow users create --username admin --password admin --firstname Eli --lastname Galindo --role Admin --email eliana.galindo@endeavorlabs.co &&
+      (airflow scheduler &) &&
+      airflow webserver"
+
+volumes:
+  pg_data:

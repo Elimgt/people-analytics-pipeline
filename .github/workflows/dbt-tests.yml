@@ -1,0 +1,50 @@
+name: dbt tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  dbt-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: dbt_user
+          POSTGRES_PASSWORD: dbt_pass
+          POSTGRES_DB: people_analytics
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U dbt_user"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python src/generate_data.py
+      - name: Load data into Postgres
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: people_analytics
+          DB_USER: dbt_user
+          DB_PASSWORD: dbt_pass
+        run: python src/load_data.py
+      - name: dbt run + test
+        working-directory: dbt_project
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: dbt_user
+          DB_PASSWORD: dbt_pass
+          DB_NAME: people_analytics
+        run: |
+          dbt run --profiles-dir .
+          dbt test --profiles-dir .

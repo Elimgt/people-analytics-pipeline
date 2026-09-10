@@ -1,0 +1,40 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: candidates
+      - name: job_requisitions
+      - name: pipeline_stages
+      - name: offers
+
+models:
+  - name: stg_candidates
+    columns:
+      - name: candidate_id
+        tests:
+          - unique
+          - not_null
+      - name: source
+        tests:
+          - accepted_values:
+              values: ["LinkedIn", "Referral", "Job Board", "Career Site", "Recruiter Outreach"]
+  - name: stg_requisitions
+    columns:
+      - name: req_id
+        tests:
+          - unique
+          - not_null
+  - name: stg_pipeline_stages
+    columns:
+      - name: stage
+        tests:
+          - accepted_values:
+              values: ["Applied", "Screening", "Interview", "Offer", "Hired", "Rejected"]
+  - name: stg_offers
+    columns:
+      - name: offer_id
+        tests:
+          - unique
+          - not_null
