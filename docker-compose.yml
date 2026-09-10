@@ -1,4 +1,3 @@
-version: "3.8"
 services:
   postgres:
     image: postgres:15
@@ -22,7 +21,7 @@ services:
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: sqlite:////opt/airflow/airflow.db
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://dbt_user:dbt_pass@postgres:5432/airflow
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: people_analytics
