@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -20,7 +20,17 @@ TABLES = {
 if __name__ == "__main__":
     with engine.begin() as conn:
         conn.exec_driver_sql("CREATE SCHEMA IF NOT EXISTS raw;")
+
+    existing_tables = inspect(engine).get_table_names(schema="raw")
+
     for table, path in TABLES.items():
         df = pd.read_csv(path)
-        df.to_sql(table, engine, schema="raw", if_exists="replace", index=False)
+        if table in existing_tables:
+            # Table already exists (and dbt views may depend on it) — refresh
+            # its contents in place instead of dropping and recreating it.
+            with engine.begin() as conn:
+                conn.execute(text(f'TRUNCATE TABLE raw."{table}"'))
+            df.to_sql(table, engine, schema="raw", if_exists="append", index=False)
+        else:
+            df.to_sql(table, engine, schema="raw", if_exists="replace", index=False)
         print(f"Loaded raw.{table} ({len(df)} rows)")
