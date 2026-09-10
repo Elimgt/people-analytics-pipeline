@@ -1,3 +1,4 @@
+import os
 import random
 from datetime import timedelta
 from faker import Faker
@@ -88,6 +89,7 @@ if __name__ == "__main__":
     pipeline = gen_pipeline(candidates)
     offers = gen_offers(pipeline)
 
+    os.makedirs("data/raw", exist_ok=True)
     reqs.to_csv("data/raw/job_requisitions.csv", index=False)
     candidates.to_csv("data/raw/candidates.csv", index=False)
     pipeline.to_csv("data/raw/pipeline_stages.csv", index=False)
