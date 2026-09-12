@@ -11,6 +11,11 @@ sources:
 
 models:
   - name: stg_candidates
+    description: >
+      Cleaned candidate records: names trimmed, recruiting sources
+      standardized to a canonical set (falling back to 'Unknown' for
+      missing/unrecognized values), and duplicate export rows for the
+      same candidate_id removed (keeping the earliest application).
     columns:
       - name: candidate_id
         tests:
@@ -20,20 +25,41 @@ models:
         tests:
           - accepted_values:
               arguments:
-                values: ["LinkedIn", "Referral", "Job Board", "Career Site", "Recruiter Outreach"]
+                values: ["LinkedIn", "Referral", "Job Board", "Career Site", "Recruiter Outreach", "Unknown"]
   - name: stg_requisitions
+    description: >
+      Requisitions with hiring_manager backfilled to 'Unknown' where the
+      raw export had no value recorded.
     columns:
       - name: req_id
         tests:
           - unique
           - not_null
+      - name: hiring_manager
+        tests:
+          - not_null
   - name: stg_pipeline_stages
+    description: >
+      Funnel stage history per candidate. A small number of rows reference
+      a candidate_id that no longer exists in stg_candidates (e.g. a
+      record purged for a data-retention request without its funnel
+      history being cleaned up downstream) - tracked as a warning rather
+      than a hard failure, since it reflects a real known data-quality gap
+      rather than a broken pipeline.
     columns:
       - name: stage
         tests:
           - accepted_values:
               arguments:
                 values: ["Applied", "Screening", "Interview", "Offer", "Hired", "Rejected"]
+      - name: candidate_id
+        tests:
+          - relationships:
+              config:
+                severity: warn
+              arguments:
+                to: ref('stg_candidates')
+                field: candidate_id
   - name: stg_offers
     columns:
       - name: offer_id

@@ -2,7 +2,7 @@ select
     req_id,
     title,
     department,
-    hiring_manager,
+    coalesce(hiring_manager, 'Unknown') as hiring_manager,
     opened_date::date as opened_date,
     closed_date::date as closed_date,
     status

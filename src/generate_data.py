@@ -10,8 +10,31 @@ random.seed(42)
 
 N_REQS = 40
 N_CANDIDATES = 600
-SOURCES = ["LinkedIn", "Referral", "Job Board", "Career Site", "Recruiter Outreach"]
 DEPARTMENTS = ["Engineering", "Sales", "Product", "People", "Design", "Data"]
+
+# Canonical recruiting sources, each with the messy real-world spellings an
+# ATS export tends to contain (manual entry, integrations with inconsistent
+# casing, stray whitespace, etc.).
+SOURCE_VARIANTS = {
+    "LinkedIn": ["LinkedIn", "linkedin", "Linked In"],
+    "Referral": ["Referral", "referral", "REFERRAL"],
+    "Job Board": ["Job Board", "job board", "JobBoard"],
+    "Career Site": ["Career Site", "career site"],
+    "Recruiter Outreach": ["Recruiter Outreach", "recruiter outreach"],
+}
+SOURCES = list(SOURCE_VARIANTS.keys())
+
+
+def messy_source(canonical):
+    # ~5% of rows never had a source captured at intake.
+    if random.random() < 0.05:
+        return None
+    variant = random.choice(SOURCE_VARIANTS[canonical])
+    # ~15% of rows carry stray whitespace, common with manual data entry.
+    if random.random() < 0.15:
+        variant = f"  {variant}  "
+    return variant
+
 
 def gen_requisitions():
     rows = []
@@ -22,26 +45,40 @@ def gen_requisitions():
             "req_id": f"REQ-{i+1:03d}",
             "title": fake.job(),
             "department": random.choice(DEPARTMENTS),
-            "hiring_manager": fake.name(),
+            # ~5% of requisitions are missing a hiring manager (e.g. an
+            # interim req opened before one was assigned).
+            "hiring_manager": fake.name() if random.random() > 0.05 else None,
             "opened_date": opened,
             "closed_date": closed,
             "status": random.choice(["Closed", "Open"]),
         })
     return pd.DataFrame(rows)
 
+
 def gen_candidates(reqs):
     rows = []
     for i in range(N_CANDIDATES):
         req = reqs.sample(1).iloc[0]
         applied = fake.date_between(start_date=req["opened_date"], end_date="today")
+        name = fake.name()
+        # ~5% of names carry stray leading/trailing whitespace.
+        if random.random() < 0.05:
+            name = f"  {name}  "
         rows.append({
             "candidate_id": f"CAND-{i+1:04d}",
-            "name": fake.name(),
-            "source": random.choice(SOURCES),
+            "name": name,
+            "source": messy_source(random.choice(SOURCES)),
             "req_id": req["req_id"],
             "applied_date": applied,
         })
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+
+    # Simulate a known ATS export quirk: a handful of candidates get
+    # exported twice (e.g. a sync re-ran without deduping).
+    duplicate_sample = df.sample(frac=0.03, random_state=7)
+    df = pd.concat([df, duplicate_sample], ignore_index=True)
+    return df
+
 
 def gen_pipeline(candidates):
     rows = []
@@ -66,7 +103,25 @@ def gen_pipeline(candidates):
                 "stage": stage,
                 "stage_date": date,
             })
+
+    # Simulate a small number of orphan funnel records: stages logged for a
+    # candidate_id that no longer exists in the candidates table (e.g. a
+    # candidate record purged for a data-retention/GDPR request, while
+    # their funnel history wasn't cleaned up downstream). This is a
+    # realistic referential-integrity issue, deliberately left in raw data
+    # and caught by a dbt relationships test instead of hidden here.
+    sample_req_ids = candidates["req_id"].drop_duplicates().sample(3, random_state=11)
+    for i, req_id in enumerate(sample_req_ids):
+        rows.append({
+            "application_id": f"CAND-ORPHAN-{i+1:02d}-{req_id}",
+            "candidate_id": f"CAND-ORPHAN-{i+1:02d}",
+            "req_id": req_id,
+            "stage": "Applied",
+            "stage_date": fake.date_between(start_date="-2M", end_date="today"),
+        })
+
     return pd.DataFrame(rows)
+
 
 def gen_offers(pipeline):
     offers = pipeline[pipeline["stage"] == "Offer"].copy()
@@ -79,9 +134,12 @@ def gen_offers(pipeline):
             "offer_date": o["stage_date"],
             "accepted": accepted,
             "accepted_date": o["stage_date"] + timedelta(days=random.randint(1, 10)) if accepted else None,
-            "salary": random.randint(45000, 130000),
+            # ~5% of offers are missing a recorded salary (e.g. equity-only
+            # or not-yet-finalized offers).
+            "salary": random.randint(45000, 130000) if random.random() > 0.05 else None,
         })
     return pd.DataFrame(rows)
+
 
 if __name__ == "__main__":
     reqs = gen_requisitions()

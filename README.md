@@ -46,6 +46,17 @@ Orchestrated by Airflow (Docker) · Tested with dbt tests · CI on GitHub Action
 - `fct_offer_acceptance`: offer acceptance rate
 - `fct_source_effectiveness`: hire rate by recruiting source
 
+## Data Quality
+
+The raw data intentionally simulates real-world messiness instead of arriving perfectly clean:
+
+- Inconsistent recruiting source spellings/casing and stray whitespace (`"linkedin"`, `"  LinkedIn  "`, `"Linked In"`)
+- Missing values (source, hiring manager, salary not always captured)
+- Duplicate candidate export rows (a common ATS sync quirk)
+- A few orphan funnel records referencing a candidate_id that no longer exists (e.g. a record purged for a data-retention request)
+
+The `staging` models handle each of these explicitly: source values are standardized to a canonical set (falling back to `Unknown`), duplicates are deduplicated with a window function, and missing hiring managers are backfilled. The orphan-record case is caught by a dbt `relationships` test configured with `severity: warn`, so it surfaces as a tracked, known data-quality issue instead of silently breaking the pipeline.
+
 ## How to run it locally
 
 1. Prerequisites: Docker Desktop, Python 3.11, dbt (`pip install -r requirements.txt`).
