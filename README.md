@@ -22,6 +22,16 @@ generate_data.py → raw CSVs (simulate an ATS/HRIS export)
 Orchestrated by Airflow (Docker) · Tested with dbt tests · CI on GitHub Actions
 ```
 
+## Tech Stack
+
+- **Python**: generates the synthetic recruiting data (`Faker`) and loads it into the database (`pandas`, `SQLAlchemy`, `psycopg2`).
+- **PostgreSQL**: stores both the raw data and the transformed models.
+- **dbt**: transforms raw data into clean models (staging → marts) and runs automated data quality tests.
+- **Apache Airflow**: orchestrates the full pipeline as a daily DAG (generate → load → transform → test).
+- **Docker / Docker Compose**: runs Postgres and Airflow as isolated, reproducible containers.
+- **GitHub Actions (CI/CD)**: runs the dbt test suite automatically on every push.
+- **Git / GitHub**: version control and the public repository.
+
 ## Data model
 
 - `job_requisitions`: open/closed roles by department
