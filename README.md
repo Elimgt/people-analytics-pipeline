@@ -45,6 +45,16 @@ Orchestrated by Airflow (Docker) · Tested with dbt tests · CI on GitHub Action
 5. Transform with dbt: `cd dbt_project && dbt run --profiles-dir . && dbt test --profiles-dir .`
 6. View the DAG in Airflow: http://localhost:8080 (user `admin`, password `admin`)
 
+## Screenshots
+
+**Airflow DAG run — all 4 tasks succeeding:**
+
+![Airflow DAG graph](screenshots/airflow-dag-graph.png)
+
+**CI passing on GitHub Actions:**
+
+![CI passing](screenshots/ci-success.png)
+
 ## What I learned / next steps
 
 - Migrate the warehouse to BigQuery/Snowflake and raw data to an S3/GCS bucket.
